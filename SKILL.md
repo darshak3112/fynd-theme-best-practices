@@ -1,6 +1,6 @@
 ---
 name: fynd-theme-best-practices
-description: Optimize, refactor, and explain Fynd Commerce theme codebases (FDK React templates). Use when asked to locate or explain features in `src/`, apply theme best practices, reason about theme sections/blocks, or clarify Storefront GraphQL queries like `productPrice`.
+description: Optimize, refactor, and explain Fynd Commerce theme codebases (FDK React templates). Includes Vercel React best practices (57 rules across 8 categories) for writing optimized React code. Use when asked to locate or explain features in `src/`, apply theme or React performance best practices, reason about theme sections/blocks, optimize bundle size or rendering, eliminate waterfalls, or clarify Storefront GraphQL queries like `productPrice`.
 ---
 
 # Fynd Theme Best Practices
@@ -15,8 +15,91 @@ Use this skill when the request involves:
 6. **"GraphQL query issues"** → GraphQL workflow
 
 **Prerequisites**:
-- For React best practices: install the `vercel-react-best-practices` skill if not available
 - For codebase questions: ensure you have access to the project's `src/` directory
+- For React/performance optimization: this skill includes Vercel React best practices (57 rules) — see `references/vercel_react_best_practices.md`
+
+## ⚠️ ALWAYS Follow FDK Best Practices
+
+**CRITICAL**: When providing code examples, suggestions, or implementations, you MUST enforce these best practices:
+
+### SSR Safety (Non-Negotiable)
+✅ **ALWAYS** check `isRunningOnClient()` before using browser APIs
+```javascript
+import { isRunningOnClient } from '../../helper/utils';
+
+if (isRunningOnClient()) {
+  // Safe to use window, document, localStorage, etc.
+}
+```
+
+❌ **NEVER** access `window`, `document`, `localStorage` directly in component body
+❌ **NEVER** use hooks conditionally
+
+### Component Standards
+✅ **ALWAYS** use `FDKLink` from `fdk-core/components` for internal navigation
+✅ **ALWAYS** use `FyImage` for product/content images (automatic optimization)
+✅ **ALWAYS** use core components (`FyButton`, `FyInput`, `Modal`) instead of custom implementations
+✅ **ALWAYS** use `transformImage()` utility for image optimization
+
+❌ **NEVER** use `<a>` tags for internal routes (breaks client-side navigation)
+❌ **NEVER** implement custom buttons/inputs when core components exist
+
+### Data Fetching
+✅ **ALWAYS** use `useFPI()` and `useGlobalStore()` for data access
+✅ **ALWAYS** implement `serverFetch` for SEO-critical data
+✅ **ALWAYS** handle loading and error states
+
+```javascript
+import { useFPI, useGlobalStore } from 'fdk-core/utils';
+
+const fpi = useFPI();
+const data = useGlobalStore(fpi.getters.CUSTOM_VALUE);
+```
+
+❌ **NEVER** make direct API calls; use FPI methods
+❌ **NEVER** skip error handling
+
+### Performance (FDK + Vercel React Best Practices)
+✅ **ALWAYS** lazy load images with `defer={true}`
+✅ **ALWAYS** use `InfiniteLoader` for long lists
+✅ **ALWAYS** memoize expensive computations
+✅ **ALWAYS** implement proper code splitting
+✅ **ALWAYS** use `Promise.all()` for independent async operations (eliminate waterfalls)
+✅ **ALWAYS** import directly from source files, avoid barrel file imports
+✅ **ALWAYS** use dynamic imports for heavy components (code editors, charts, maps)
+✅ **ALWAYS** defer non-critical third-party libs (analytics, logging) to load after hydration
+✅ **ALWAYS** use functional `setState` for stable callbacks
+✅ **ALWAYS** derive state during render, not in effects
+✅ **ALWAYS** use `useRef` for transient/frequently-changing values (scroll pos, timers)
+
+❌ **NEVER** create sequential await chains for independent operations
+❌ **NEVER** pass entire objects across server/client boundaries when only a few fields are needed
+❌ **NEVER** wrap simple primitive expressions in `useMemo`
+
+### Styling
+✅ **ALWAYS** use CSS modules (co-located `.less` files)
+✅ **ALWAYS** import styles as `import * as styles from './component.less'`
+
+❌ **NEVER** use inline styles for static styling
+❌ **NEVER** use global CSS selectors
+
+### Accessibility
+✅ **ALWAYS** provide `alt` text for images
+✅ **ALWAYS** use semantic HTML
+✅ **ALWAYS** provide `ariaLabel` for icon buttons
+
+### When Suggesting Code
+**Before providing any code suggestion**:
+1. ✅ Check if pattern exists in `references/common_patterns.md`
+2. ✅ Verify against `references/common_gotchas.md`
+3. ✅ Use actual utilities from `references/actual_utilities.md`
+4. ✅ Use core components from `references/core_components.md`
+5. ✅ Follow patterns from `references/code_examples.md`
+
+**If user's code violates best practices**:
+- 🚨 Clearly explain the issue
+- ✅ Provide corrected code following FDK conventions
+- 📚 Reference the specific best practice document
 
 ## Core Workflows
 
@@ -208,7 +291,24 @@ export const settings = {
 - `references/graphql_product_price.md`
 - `references/graphql_application_client_libraries.md`
 
-### 7. Testing \u0026 Verification Workflow
+### 7. React Performance Optimization Workflow
+**Goal**: Write optimized React code following Vercel Engineering best practices
+
+**Reference**: `references/vercel_react_best_practices.md` (57 rules, 8 categories)
+
+**Priority order** (highest impact first):
+1. **CRITICAL — Eliminate Waterfalls**: Use `Promise.all()` for independent ops, defer `await` to branches where needed, use Suspense boundaries for streaming
+2. **CRITICAL — Bundle Size**: Avoid barrel imports, use dynamic imports for heavy components, defer third-party libs, preload on user intent
+3. **HIGH — Server-Side**: Minimize serialization at RSC boundaries, parallelize data fetching with component composition, use `React.cache()` for dedup
+4. **MEDIUM-HIGH — Client Data**: Use SWR for dedup, deduplicate event listeners, use passive scroll listeners
+5. **MEDIUM — Re-renders**: Extract memoized components, use functional setState, derive state during render, use `startTransition` for non-urgent updates
+6. **MEDIUM — Rendering**: Use `content-visibility` for long lists, hoist static JSX, use ternary (not &&) for conditionals
+7. **LOW-MEDIUM — JS Perf**: Use Set/Map for O(1) lookups, early returns, combine array iterations, cache property access in loops
+8. **LOW — Advanced**: `useEffectEvent` for stable callbacks, initialize once per app load
+
+**When reviewing or writing FDK theme code, apply these in combination with FDK-specific patterns above.**
+
+### 8. Testing \u0026 Verification Workflow
 
 **Local testing**:
 1. Run development server
@@ -283,6 +383,9 @@ When answering requests:
 - `references/development_best_practices_checklist.md` - Development checklist
 - `references/testing_best_practices_checklist.md` - Testing checklist
 - `references/performance_optimization_core_web_vitals.md` - Performance guide
+
+### React Performance (Vercel Engineering)
+- `references/vercel_react_best_practices.md` - 57 rules across 8 categories (waterfalls, bundle size, SSR, client fetching, re-renders, rendering, JS perf, advanced patterns)
 
 ### Development
 - `references/themes_development.md` - Development workflow
